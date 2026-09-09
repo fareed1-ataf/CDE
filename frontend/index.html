@@ -1,0 +1,505 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cyber Data Engine | v1.0.0</title>
+<meta name="description" content="Cyber Data Engine — AI dataset generation pipeline with real-time monitoring and multi-provider LLM support."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- ════════════════ PROVIDER MODAL ════════════════ -->
+<div id="provider-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Add Provider</h3>
+      <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="modal-edit-original-name"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Provider Name</label>
+          <input type="text" id="modal-name" class="input-field" placeholder="e.g. groq-llama"/>
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="modal-type" class="input-field">
+            <option value="openai_compatible">OpenAI Compatible / Cloud</option>
+            <option value="ollama">Ollama (Local)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Endpoint / Base URL</label>
+        <input type="text" id="modal-endpoint" class="input-field" placeholder="https://api.groq.com/openai/v1"/>
+      </div>
+      <div class="form-group">
+        <label>Model Name</label>
+        <input type="text" id="modal-model" class="input-field" placeholder="llama-3.3-70b-versatile" list="modal-model-suggestions"/>
+        <datalist id="modal-model-suggestions">
+          <option value="llama-3.3-70b-versatile">
+          <option value="llama3-8b-8192">
+          <option value="mixtral-8x7b-32768">
+          <option value="gpt-4o">
+          <option value="gpt-3.5-turbo">
+          <option value="claude-3-haiku-20240307">
+          <option value="claude-3-5-sonnet-20241022">
+          <option value="gemma2-9b-it">
+        </datalist>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Temperature</label>
+          <input type="number" id="modal-temperature" class="input-field" step="0.05" min="0" max="2" value="0.15"/>
+        </div>
+        <div class="form-group">
+          <label>Max Tokens</label>
+          <input type="number" id="modal-max-tokens" class="input-field" value="3000"/>
+        </div>
+        <div class="form-group">
+          <label>Timeout (s)</label>
+          <input type="number" id="modal-timeout" class="input-field" value="180"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>API Key <span class="txt-muted">(optional for local)</span></label>
+        <input type="password" id="modal-key" class="input-field" placeholder="sk-..."/>
+      </div>
+      <div class="form-group toggle-group">
+        <label>Enabled</label>
+        <label class="toggle">
+          <input type="checkbox" id="modal-enabled" checked/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn">Save Provider</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ CONFIRM MODAL ════════════════ -->
+<div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal-box modal-box--sm">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirm Action</h3>
+      <button class="modal-close" id="confirm-close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" class="confirm-msg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="confirm-cancel-btn">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Confirm Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside id="sidebar">
+    <div id="logo-wrap">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>CDE <span class="ver">v4.0</span></h1>
+        <div class="sub">Cyber Data Engine</div>
+      </div>
+    </div>
+
+    <nav id="main-nav">
+      <div class="nav-section-label">PIPELINE</div>
+      <div class="nav-btn active" data-target="page-dash" id="nav-dash">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-label">Dashboard</span>
+      </div>
+      <div class="nav-btn" data-target="page-records" id="nav-records">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Records</span>
+        <span class="nav-badge" id="records-badge">0</span>
+      </div>
+
+      <div class="nav-section-label" style="margin-top:16px;">CONFIGURATION</div>
+      <div class="nav-btn" data-target="page-providers" id="nav-providers">
+        <span class="nav-icon">🔑</span>
+        <span class="nav-label">Providers</span>
+        <span class="nav-badge" id="prov-badge">0</span>
+      </div>
+      <div class="nav-btn" data-target="page-config" id="nav-config">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </div>
+      <div class="nav-btn" data-target="page-export" id="nav-export">
+        <span class="nav-icon">💾</span>
+        <span class="nav-label">Export</span>
+      </div>
+    </nav>
+
+    <div id="sb-footer">
+      <div id="sb-status">
+        <div id="status-dot" class="sdot idle"></div>
+        <span id="status-txt">Ready</span>
+      </div>
+      <div id="sb-engine-status" class="engine-pill offline">● Offline</div>
+    </div>
+  </aside>
+
+  <!-- ════════ MAIN ════════ -->
+  <main id="main">
+    <header id="topbar">
+      <div class="tb-left">
+        <div class="tb-title" id="page-title">Dashboard</div>
+        <div class="tb-breadcrumb" id="page-breadcrumb">Pipeline Execution</div>
+      </div>
+      <div class="tb-right">
+        <div id="global-stats-bar">
+          <span class="gstat"><span class="gstat-val" id="gs-ok">0</span><span class="gstat-lbl">Records</span></span>
+          <span class="gstat-sep">|</span>
+          <span class="gstat"><span class="gstat-val" id="gs-files">0</span><span class="gstat-lbl">Files</span></span>
+          <span class="gstat-sep">|</span>
+          <span class="gstat"><span class="gstat-val" id="gs-chunks">0</span><span class="gstat-lbl">Chunks</span></span>
+        </div>
+        <div id="engine-status" class="status-badge status-offline">Backend Disconnected</div>
+      </div>
+    </header>
+
+    <div id="content">
+
+      <!-- ══════════ PAGE: DASHBOARD ══════════ -->
+      <div id="page-dash" class="page active">
+        <div class="page-header">
+          <div>
+            <h2>Pipeline Execution</h2>
+            <p>Upload a file and run the multi-agent AI data generation pipeline in real-time.</p>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <!-- JOB CONTROL PANEL -->
+          <div class="panel panel--glow" id="job-panel">
+            <div class="panel-header">
+              <h3>🚀 Start Job</h3>
+              <span class="panel-badge" id="job-id-badge" style="display:none"></span>
+            </div>
+
+            <div class="drop-zone" id="drop-zone">
+              <div class="drop-zone-icon">📂</div>
+              <div class="drop-zone-text">Drop file here or <span class="drop-browse" id="drop-browse-btn">browse</span></div>
+              <div class="drop-zone-sub">.csv · .jsonl · .txt · .pdf</div>
+              <input type="file" id="file-input" accept=".csv,.jsonl,.txt,.pdf" style="display:none"/>
+            </div>
+            <div id="file-chosen" class="file-chosen" style="display:none">
+              <span class="file-icon">📄</span>
+              <span id="file-chosen-name"></span>
+              <button class="btn-icon-sm" id="file-clear-btn" title="Remove file">✕</button>
+            </div>
+
+            <!-- Advanced Options (collapsible) -->
+            <details class="adv-opts" id="adv-opts-details">
+              <summary>Advanced Options</summary>
+              <div class="adv-opts-body">
+                  <div class="form-group">
+                    <label>Training Goal</label>
+                    <select id="cfg-training-goal" class="input-field input-sm">
+                      <option value="general_cyber_assistant">General Cyber Assistant</option>
+                      <option value="malware_analyst">Malware Analyst</option>
+                      <option value="security_tool_builder">Security Tool Builder</option>
+                      <option value="incident_responder">Incident Responder</option>
+                      <option value="threat_intel_analyst">Threat Intel Analyst</option>
+                      <option value="secure_coder">Secure Coder</option>
+                      <option value="vulnerability_researcher">Vulnerability Researcher</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Routing Strategy</label>
+                    <select id="cfg-strategy" class="input-field input-sm">
+                      <option value="primary_fallback">Primary Fallback</option>
+                      <option value="fastest">Fastest Provider</option>
+                      <option value="round_robin">Round Robin</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Force Schema (Override)</label>
+                    <select id="cfg-schema" class="input-field input-sm">
+                      <option value="Auto-detect">Auto-detect</option>
+                      <option value="chain_of_thought">Chain of Thought</option>
+                      <option value="analysis">Structured Analysis</option>
+                      <option value="qa">Q&A Pairs</option>
+                      <option value="chat">Chat (Multi-turn)</option>
+                      <option value="code_gen">Code Generation</option>
+                      <option value="code_review">Code Review</option>
+                      <option value="incident_playbook">Incident Playbook</option>
+                      <option value="tool_usage">Tool Usage</option>
+                      <option value="threat_hunting">Threat Hunting</option>
+                      <option value="multi_step_decision">Multi-step Decision</option>
+                      <option value="detection_engineering">Detection Engineering</option>
+                      <option value="forensic_timeline">Forensic Timeline</option>
+                      <option value="negative_example">Negative Example</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Chunk Size</label>
+                    <input type="number" id="cfg-chunk" class="input-field input-sm" value="3500"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Overlap</label>
+                    <input type="number" id="cfg-overlap" class="input-field input-sm" value="400"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Min Quality</label>
+                    <input type="number" id="cfg-quality" class="input-field input-sm" step="0.05" min="0" max="1" value="0.35"/>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Max Schemas</label>
+                    <input type="number" id="cfg-max-schemas" class="input-field input-sm" value="3" min="1" max="10"/>
+                  </div>
+                  <div class="form-group toggle-group">
+                    <label>Multi-Schema</label>
+                    <label class="toggle">
+                      <input type="checkbox" id="cfg-multi-schema" checked/>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <div class="pipeline-actions">
+              <button id="btn-run" class="btn btn-primary btn-block btn-launch">
+                <span id="btn-run-icon">🚀</span>
+                <span id="btn-run-text">LAUNCH PIPELINE</span>
+              </button>
+              <button id="btn-cancel" class="btn btn-danger btn-icon-only" title="Cancel pipeline" style="display:none">
+                ⛔
+              </button>
+            </div>
+
+            <!-- Progress -->
+            <div id="progress-area" style="display:none">
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-bar"></div>
+              </div>
+              <div class="progress-info">
+                <span id="prog-pct" class="prog-pct">0%</span>
+                <span id="prog-label" class="prog-label">Initializing…</span>
+                <span id="prog-frac" class="prog-frac">0 / 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- REAL-TIME METRICS -->
+          <div class="panel" id="metrics-panel">
+            <div class="panel-header">
+              <h3>📊 Real-time Metrics</h3>
+              <button class="btn btn-ghost btn-xs" id="btn-ping" title="Ping all providers">🏓 Ping</button>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-card metric-success">
+                <div class="metric-val" id="m-success">0</div>
+                <div class="metric-lbl">✅ Success</div>
+              </div>
+              <div class="metric-card metric-fail">
+                <div class="metric-val" id="m-fail">0</div>
+                <div class="metric-lbl">❌ Failed</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-val" id="m-time">0s</div>
+                <div class="metric-lbl">⏱ Elapsed</div>
+              </div>
+            </div>
+            <div class="metric-detail-row" id="class-detail" style="display:none">
+              <div class="detail-item"><span class="detail-lbl">Schema</span><span class="detail-val" id="d-schema">–</span></div>
+              <div class="detail-item"><span class="detail-lbl">Task</span><span class="detail-val" id="d-task">–</span></div>
+              <div class="detail-item"><span class="detail-lbl">Confidence</span><span class="detail-val" id="d-conf">–</span></div>
+              <div class="detail-item"><span class="detail-lbl">Provider</span><span class="detail-val" id="d-provider">–</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIVE LOGS -->
+        <div class="panel" style="margin-top:20px;">
+          <div class="panel-header">
+            <h3>🖥 Live Logs</h3>
+            <div class="log-controls">
+              <div class="log-filter-group" id="log-filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="success">✅</button>
+                <button class="filter-btn" data-filter="warn">⚠️</button>
+                <button class="filter-btn" data-filter="error">❌</button>
+              </div>
+              <label class="toggle-lbl">
+                <input type="checkbox" id="auto-scroll" checked/>
+                <span>Auto-scroll</span>
+              </label>
+              <button class="btn btn-ghost btn-xs" id="btn-clear-logs">Clear</button>
+            </div>
+          </div>
+          <div id="terminal" class="terminal-box"></div>
+        </div>
+      </div>
+
+      <!-- ══════════ PAGE: RECORDS ══════════ -->
+      <div id="page-records" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Generated Records</h2>
+            <p>Browse, search, and inspect all generated training records from the output database.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="records-toolbar">
+            <input type="text" id="rec-search" class="input-field" placeholder="🔍 Search records…" style="flex:1;max-width:300px;"/>
+            <select id="rec-task-filter" class="input-field input-sm">
+              <option value="">All Task Types</option>
+              <option value="qa">Q&A</option>
+              <option value="analysis">Analysis</option>
+              <option value="classification">Classification</option>
+            </select>
+            <button class="btn btn-secondary" id="btn-load-records">Load Records</button>
+            <span class="txt-muted" id="rec-total-lbl" style="font-size:12px;white-space:nowrap;"></span>
+          </div>
+          <div id="records-list" class="records-list"></div>
+          <div class="pagination" id="rec-pagination"></div>
+        </div>
+      </div>
+
+      <!-- ══════════ PAGE: PROVIDERS ══════════ -->
+      <div id="page-providers" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Model Providers</h2>
+            <p>Manage LLM backend connections — OpenAI, Groq, Ollama, Anthropic, and more.</p>
+          </div>
+          <div class="page-header-actions">
+            <button class="btn btn-ghost" id="btn-ping-all">🏓 Ping All</button>
+            <button class="btn btn-primary" id="btn-open-add-modal">+ Add Provider</button>
+          </div>
+        </div>
+        <div id="prov-list" class="provider-grid">
+          <div class="prov-empty">No providers configured. Click "Add Provider" to get started.</div>
+        </div>
+      </div>
+
+      <!-- ══════════ PAGE: CONFIG ══════════ -->
+      <div id="page-config" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Pipeline Settings</h2>
+            <p>Configure default pipeline parameters. Settings are saved to your browser.</p>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <div class="panel">
+            <div class="panel-header"><h3>Routing & Quality</h3></div>
+            <div class="form-group">
+              <label>Default Routing Strategy</label>
+              <select id="s-strategy" class="input-field">
+                <option value="primary_fallback">Primary Fallback (Sequential)</option>
+                <option value="fastest">Fastest Provider</option>
+                <option value="round_robin">Round Robin (Load Balance)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quality Threshold (0.0 – 1.0)</label>
+              <input type="number" id="s-quality" class="input-field" step="0.05" min="0" max="1" value="0.35"/>
+              <div class="input-hint">Records below this quality score will be discarded.</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>Parsing Settings</h3></div>
+            <div class="form-group">
+              <label>Chunk Size (characters)</label>
+              <input type="number" id="s-chunk" class="input-field" value="3500"/>
+              <div class="input-hint">Larger chunks = more context but slower processing.</div>
+            </div>
+            <div class="form-group">
+              <label>Chunk Overlap</label>
+              <input type="number" id="s-overlap" class="input-field" value="400"/>
+            </div>
+            <div class="form-group">
+              <label>Max Schemas per Chunk</label>
+              <input type="number" id="s-max-schemas" class="input-field" value="3" min="1" max="10"/>
+            </div>
+          </div>
+          <div class="panel panel--full">
+            <div class="panel-header"><h3>System Actions</h3></div>
+            <div class="action-cards">
+              <div class="action-card">
+                <div class="action-card-icon">🗑️</div>
+                <div>
+                  <div class="action-card-title">Clear File Cache</div>
+                  <div class="action-card-desc">Forces re-processing of already-seen files.</div>
+                </div>
+                <button class="btn btn-danger btn-sm" id="btn-clear-cache">Clear Cache</button>
+              </div>
+              <div class="action-card">
+                <div class="action-card-icon">💾</div>
+                <div>
+                  <div class="action-card-title">Save Settings</div>
+                  <div class="action-card-desc">Persist current configuration to local storage.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Settings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ PAGE: EXPORT ══════════ -->
+      <div id="page-export" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Export Datasets</h2>
+            <p>Download generated training data in various formats for fine-tuning LLMs.</p>
+          </div>
+        </div>
+        <div class="export-grid">
+          <div class="panel export-card">
+            <div class="export-icon">📄</div>
+            <h3>Alpaca JSONL</h3>
+            <p class="txt-muted">Standard instruction tuning format (instruction / input / output). Includes negative examples + MITRE ATT&CK validation.</p>
+            <div class="export-opts">
+              <label class="toggle-lbl"><input type="checkbox" id="exp-neg-alpaca" checked/> <span>Add Negatives</span></label>
+              <label class="toggle-lbl"><input type="checkbox" id="exp-mitre-alpaca" checked/> <span>MITRE Validate</span></label>
+              <label class="toggle-lbl"><input type="checkbox" id="exp-curr-alpaca" checked/> <span>Curriculum Sort</span></label>
+            </div>
+            <button class="btn btn-primary" id="btn-exp-alpaca">⬇️ Download Alpaca</button>
+          </div>
+          <div class="panel export-card">
+            <div class="export-icon">🦙</div>
+            <h3>Llama-3 Instruct</h3>
+            <p class="txt-muted">Chat-formatted with special tokens for Llama-3 fine-tuning (&lt;|start_header_id|&gt; format).</p>
+            <div class="export-opts">
+              <label class="toggle-lbl"><input type="checkbox" id="exp-neg-llama" checked/> <span>Add Negatives</span></label>
+              <label class="toggle-lbl"><input type="checkbox" id="exp-curr-llama" checked/> <span>Curriculum Sort</span></label>
+            </div>
+            <button class="btn btn-primary" id="btn-exp-llama">⬇️ Download Llama-3</button>
+          </div>
+          <div class="panel export-card">
+            <div class="export-icon">✨</div>
+            <h3>Rich Dataset</h3>
+            <p class="txt-muted">Enhanced records with metadata — threat level, MITRE tactics, schema type, quality score.</p>
+            <div class="export-opts">&nbsp;</div>
+            <button class="btn btn-secondary" onclick="window.open('/api/v1/export/rich','_blank')">⬇️ Download Rich</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

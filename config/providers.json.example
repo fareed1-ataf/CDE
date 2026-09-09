@@ -1,0 +1,41 @@
+[
+  {
+    "name": "ollama-local",
+    "provider_type": "ollama",
+    "endpoint": "http://localhost:11434/api/generate",
+    "model": "llama3",
+    "api_key": "",
+    "temperature": 0.15,
+    "max_tokens": 8000,
+    "timeout": 180,
+    "max_retries": 3,
+    "enabled": true,
+    "preferred_schemas": []
+  },
+  {
+    "name": "groq-primary",
+    "provider_type": "openai_compatible",
+    "endpoint": "https://api.groq.com/openai/v1",
+    "model": "llama-3.3-70b-versatile",
+    "api_key": "${GROQ_API_KEY}",
+    "temperature": 0.15,
+    "max_tokens": 8000,
+    "timeout": 60,
+    "max_retries": 3,
+    "enabled": true,
+    "preferred_schemas": []
+  },
+  {
+    "name": "openai-gpt4",
+    "provider_type": "openai_compatible",
+    "endpoint": "https://api.openai.com/v1",
+    "model": "gpt-4o-mini",
+    "api_key": "${OPENAI_API_KEY}",
+    "temperature": 0.15,
+    "max_tokens": 8000,
+    "timeout": 60,
+    "max_retries": 3,
+    "enabled": false,
+    "preferred_schemas": []
+  }
+]

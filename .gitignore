@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cyber Data Engine — .gitignore
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Sensitive config (API keys, resolved secrets) ────────────────────────────
+config/providers.json
+config/cache.json
+config/cache.db
+
+# ── Generated outputs (never commit training data) ───────────────────────────
+output/
+
+# ── Runtime logs ─────────────────────────────────────────────────────────────
+logs/
+
+# ── Python bytecode ──────────────────────────────────────────────────────────
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Environment variable files ───────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDE / OS artifacts ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
+
+# ── Test cache ───────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Large data files (training datasets, parquet, raw input) ──────────────
+*.parquet
+*.parquet.as.json
+*.jsonl
+!config/providers.json.example
+
+# ── Test input files ────────────────────────────────────────
+test_files/
+test_data.txt
+test_classifier.py
+
+# ── Installed package artifacts ─────────────────────────────
+*.egg-info/
+site-packages/

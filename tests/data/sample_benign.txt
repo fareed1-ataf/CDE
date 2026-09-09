@@ -1,0 +1,4 @@
+This is a safe, synthetic document for testing purposes.
+It describes how networking protocols function.
+The TCP/IP stack is fundamental to internet communications.
+It does not contain any malicious payloads or attack simulations.
