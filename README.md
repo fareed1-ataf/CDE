@@ -19,7 +19,7 @@
 ## 🏗️ Architecture
 
 <div align="center">
-<img src="docs/assets/architecture_diagram.png" alt="10-Stage Pipeline Architecture" width="100%"/>
+<img src="docs/assets/architecture_diagram .png" alt="10-Stage Pipeline Architecture" width="100%"/>
 </div>
 
 ---
