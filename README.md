@@ -100,8 +100,8 @@ Cyber Data Engine (CDE) converts raw cybersecurity files into structured, high-q
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/cyber-data-engine.git
-cd cyber-data-engine
+git clone https://github.com/fareed1-ataf/CDE.git
+cd CDE
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
